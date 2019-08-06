@@ -1,0 +1,121 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Serialization;
+using System.IO;
+using System.Configuration;
+using System.Data.SqlClient;
+
+namespace ConsoleWebApiService
+{
+    class Program
+    {
+        private static readonly string YourKey = ConfigurationSettings.AppSettings["key"].ToString();
+        private static readonly string ApiUri = ConfigurationSettings.AppSettings["Api"].ToString();
+        static DataToSend RowContent = new DataToSend();
+        static Data DataEmbaded = new Data();
+
+        static void Main(string[] args)
+        {
+            try
+            {
+                Program p = new Program();
+                RowContent = p.GetDataToMakeApiRequest();
+
+                if (RowContent.data != null)
+                {
+                    // Request Header Configurations 
+
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(ApiUri);
+                    request.Headers.Add("Authorization", YourKey);
+                    request.ContentType = "application/json";
+                    // Request Type Http Methods like (Get,Put,Patch,Post,Delete) as per your Api Requirements.
+                    request.Method = "POST";
+                    request.Timeout = 7000;
+
+                    using (var streamWriter = new StreamWriter(request.GetRequestStream()))
+                    {
+                        // Converting Row Data in Json formatted Data.
+                        string Jsondata = Newtonsoft.Json.JsonConvert.SerializeObject(RowContent);
+                        streamWriter.Write(Jsondata);
+                        streamWriter.Flush();
+                        streamWriter.Close();
+                    }
+
+                    // Finally making api Request 
+                    HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+
+                    // Reading  api Response 
+                    Stream responseStream = response.GetResponseStream();
+
+                    string ApiResponse = null;
+
+                    using (StreamReader reader = new StreamReader(responseStream))
+                    {
+                        ApiResponse = reader.ReadToEnd();
+                        Console.WriteLine();
+                        reader.Close();
+                    }
+                    Console.Write("Api Request made successfully. Success Info = " + ApiResponse);
+                    System.Threading.Thread.Sleep(2000);
+
+                }
+
+            }
+
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message + ex.InnerException + ex.StackTrace);
+                System.Threading.Thread.Sleep(6000);
+            }
+        }
+
+
+        //Dummy Data
+        public DataToSend GetDataToMakeApiRequest()
+        {
+
+            DataToSend dataToSend = new DataToSend()
+            {
+                data = new Data()
+                {
+                    name = DataEmbaded.name,
+                    title = DataEmbaded.title,
+                    url = DataEmbaded.url,
+                    urlToImage = DataEmbaded.urlToImage,
+                    content = DataEmbaded.content
+                },
+                to = "row Data",
+                click_action = "Actions"
+            };
+            return dataToSend;
+
+        }
+
+
+    }
+
+
+    // Json main Class    
+    public class DataToSend
+    {
+        public string to { get; set; }
+        public Data data { get; set; }
+        public string click_action { get; set; }
+
+    }
+
+    public class Data
+    {
+        public string name { get; set; }
+        public string title { get; set; }
+        public string content { get; set; }
+        public string urlToImage { get; set; }
+        public string url { get; set; }
+    }
+
+
+}
